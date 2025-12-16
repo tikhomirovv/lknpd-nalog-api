@@ -43,10 +43,41 @@ class NalogApi extends NalogClient {
     return incomeInfo;
   }
 
-  async getApprovedIncome(receiptUuid: string, format: "json" | "print" = "json"): Promise<INalogReceiptIncome | Blob> {
+  // Private method to build receipt path
+  // Centralized path formation for receipt endpoints
+  // Returns path like: receipt/${inn}/${receiptUuid}/${format}
+  async #buildReceiptPath(receiptUuid: string, format: "json" | "print"): Promise<string> {
     const inn = await this.getInn();
-    const r = await fetch(`${this.apiUrl}/receipt/${inn}/${receiptUuid}/${format}`);
-    return format === "json" ? await r.json() : await r.blob();
+    return `receipt/${inn}/${receiptUuid}/${format}`;
+  }
+
+  // Get receipt data in JSON format
+  // Uses callMethod for proper authentication
+  async getReceiptData(receiptUuid: string): Promise<INalogReceiptIncome> {
+    const path = await this.#buildReceiptPath(receiptUuid, "json");
+    return (await this.callMethod(path)) as INalogReceiptIncome;
+  }
+
+  // Get receipt URL for print format
+  // Accepts receipt data object and returns print URL
+  async getReceiptUrl(receiptData: INalogReceiptIncome): Promise<string> {
+    const path = await this.#buildReceiptPath(receiptData.receiptId, "print");
+    return `${this.apiUrl}/${path}`;
+  }
+
+  // Get approved income receipt (backward compatibility)
+  // For json format, uses getReceiptData
+  // For print format, uses fetch directly (returns Blob)
+  async getApprovedIncome(receiptUuid: string, format: "json" | "print" = "json"): Promise<INalogReceiptIncome | Blob> {
+    if (format === "print") {
+      // For print format, use fetch directly (returns Blob)
+      const path = await this.#buildReceiptPath(receiptUuid, "print");
+      const url = `${this.apiUrl}/${path}`;
+      const r = await fetch(url);
+      return await r.blob();
+    }
+    // For json format, use getReceiptData which includes authentication
+    return await this.getReceiptData(receiptUuid);
   }
 }
 
