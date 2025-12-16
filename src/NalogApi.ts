@@ -59,9 +59,9 @@ class NalogApi extends NalogClient {
   }
 
   // Get receipt URL for print format
-  // Accepts receipt data object and returns print URL
-  async getReceiptUrl(receiptData: INalogReceiptIncome): Promise<string> {
-    const path = await this.#buildReceiptPath(receiptData.receiptId, "print");
+  // Accepts receipt UUID and returns print URL
+  async getReceiptUrl(receiptUuid: string): Promise<string> {
+    const path = await this.#buildReceiptPath(receiptUuid, "print");
     return `${this.apiUrl}/${path}`;
   }
 
@@ -71,8 +71,7 @@ class NalogApi extends NalogClient {
   async getApprovedIncome(receiptUuid: string, format: "json" | "print" = "json"): Promise<INalogReceiptIncome | Blob> {
     if (format === "print") {
       // For print format, use fetch directly (returns Blob)
-      const path = await this.#buildReceiptPath(receiptUuid, "print");
-      const url = `${this.apiUrl}/${path}`;
+      const url = await this.getReceiptUrl(receiptUuid);
       const r = await fetch(url);
       return await r.blob();
     }
